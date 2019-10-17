@@ -12,18 +12,19 @@ conflictManager   in updateSbtClassifiers in ThisBuild := ConflictManager.defaul
 
 enablePlugins( FormatPlugin, DependenciesPlugin )
 
+val parfreeSettings = Seq( libraryDependencies ++= betterMonadicFor ++ kindProjector ++ splain )
+
 val `parfree-core` = project
-  .settings( libraryDependencies ++= cats ++ catsEffect )
+  .settings( parfreeSettings )
+  .settings( libraryDependencies ++= cats ++ catsFree )
   .enablePlugins( SbtBuildInfo, ScalacPlugin )
 
-val `parallel-free-tests` = project
+val `parfree-tests` = project
+  .settings( parfreeSettings )
   .settings( libraryDependencies ++= (scalatest ++ scalacheck).map( _ % "test" ) )
   .dependsOn( `parfree-core` )
   .enablePlugins( ScalacPlugin )
 
 val `parallel-free-all` = project
   .in( file( "." ) )
-  .aggregate(
-    `parfree-core`,
-    `parallel-free-tests`
-  )
+  .aggregate( `parfree-core`, `parfree-tests` )
