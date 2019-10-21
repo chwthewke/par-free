@@ -27,13 +27,23 @@ object ParFree {
   }
 
   implicit class ParFreeOps[F[_], A]( private val self: ParFree[F, A] ) extends AnyVal {
-    def foldPar[G[_]]( f: F ~> G )( implicit P: Parallel[G] ): G[A] =
-      self.foldMap( new FunctionK[FreeApplicative[F, *], G] {
-        override def apply[X]( fa: FreeApplicative[F, X] ): G[X] =
-          P.sequential( fa.foldMap( f.andThen( P.parallel ) )( P.applicative ) )
-      } )( P.monad )
+    def parFoldMap[G[_]]( f: F ~> G )( implicit P: Parallel[G] ): G[A] =
+      ParFree.parFoldMap( f ).apply( self )
   }
 
   def liftF[F[_], A]( fa: F[A] ): ParFree[F, A] = Free.liftF( FreeApplicative.lift( fa ) )
+
+  def parFoldMap[F[_], G[_]]( f: F ~> G )( implicit P: Parallel[G] ): ParFree[F, *] ~> G =
+    new FunctionK[ParFree[F, *], G] {
+      implicit def PA: Applicative[P.F] = P.applicative
+      implicit def PM: Monad[G]         = P.monad
+
+      override def apply[A]( fa: ParFree[F, A] ): G[A] = {
+        fa.foldMap( new FunctionK[FreeApplicative[F, *], G] {
+          override def apply[X]( fa: FreeApplicative[F, X] ): G[X] =
+            P.sequential( fa.foldMap( f.andThen( P.parallel ) ) )
+        } )
+      }
+    }
 
 }
